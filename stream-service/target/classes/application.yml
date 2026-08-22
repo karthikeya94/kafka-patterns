@@ -1,0 +1,33 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: stream-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    streams:
+      application-id: kafka-lab-streams
+      properties:
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.springframework.kafka.support.serializer.JacksonJsonSerde
+        commit.interval.ms: 1000
+        cache.max.bytes.buffering: 10485760
+        processing.guarantee: exactly_once_v2
+      auto-startup: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.example.kafkalab: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+    org.apache.kafka.streams: INFO

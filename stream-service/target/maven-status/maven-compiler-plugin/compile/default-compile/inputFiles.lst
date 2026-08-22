@@ -1,0 +1,12 @@
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/StreamServiceApplication.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/config/StreamsConfig.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/controller/StreamsQueryController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/state/StateStoreService.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/aggregate/AggregateTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/branch/BranchTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/error/ErrorHandlingTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/filter/FilterTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/join/JoinTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/ktable/KTableTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/transform/TransformTopology.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/stream-service/src/main/java/com/example/kafkalab/streams/topology/window/WindowTopology.java

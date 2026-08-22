@@ -1,0 +1,6 @@
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/common/src/main/java/com/example/kafkalab/common/dto/EventSourcingDTOs.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/common/src/main/java/com/example/kafkalab/common/dto/KafkaDemoEvent.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/common/src/main/java/com/example/kafkalab/common/dto/RequestReplyDTOs.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/common/src/main/java/com/example/kafkalab/common/dto/StreamsDTOs.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/common/src/main/java/com/example/kafkalab/common/logging/KafkaLabLogger.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/common/src/main/java/com/example/kafkalab/common/topic/KafkaTopics.java

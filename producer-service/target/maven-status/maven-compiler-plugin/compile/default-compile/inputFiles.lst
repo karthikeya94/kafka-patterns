@@ -1,0 +1,13 @@
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/ProducerServiceApplication.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/config/KafkaProducerConfig.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/config/TopicConfig.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaBackoffRetryController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaDltController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaEventSourcingController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaPubSubController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaQueueController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaReplayController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaRequestReplyController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaRetryController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaRetryDltController.java
+/home/karthikeyan/Documents/claude/kafka/kafka-communication-lab/producer-service/src/main/java/com/example/kafkalab/producer/controller/KafkaStreamsTriggerController.java
