@@ -96,3 +96,189 @@ The Streams error example is intentionally different from listener DLT handling:
 Kafka is a retained log: `earliest` consumes retained history, `latest` starts at new records, and a consumer group can be reset to a chosen offset. For a deliberate replay, stop the consumer and use `kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group replay-demo-group --topic event-replay-demo --reset-offsets --to-earliest --execute`; then restart it. Do not delete offsets automatically from the app.
 
 A DLT is a Dead Letter Topic (often casually called a DLQ). Retry is consumer processing policy, not a Kafka queue feature. Request/reply is intentionally synchronous only for the lab; normal HTTP or gRPC is usually a better fit when a service genuinely needs a synchronous response.
+
+Spring Kafka provides several AckMode options inside ContainerProperties. They control exactly when and how often the consumer sends offset commits back to the Kafka broker.
+------------------------------
+## The 7 Available AckModes
+Here is the complete list of available AckMode settings:
+
+| AckMode | Behavior |
+|---|---|
+| BATCH (Default) | Commits all offsets from the current batch after all records returned by the poll are processed. |
+| RECORD | Commits the offset automatically immediately after the individual listener method returns. |
+| TIME | Commits container offsets only after a user-defined time interval has passed. |
+| COUNT | Commits container offsets only after a user-defined number of records have been processed. |
+| COUNT_TIME | Commits offsets whenever either the TIME or COUNT threshold is hit first. |
+| MANUAL | Standard manual mode. Acknowledges are queued in memory and committed on the next poll batch. |
+| MANUAL_IMMEDIATE | Strict manual mode. Commits the offset to Kafka synchronously and instantly on the listener thread. |
+
+------------------------------
+## When to Use Which One## 1. Use BATCH (The Default)
+
+* When to use: For 90% of standard applications. It provides the best performance balance.
+* Why: It minimizes network round-trips to the Kafka broker. It processes a batch of messages in memory and sends one single commit for the highest offset at the end.
+* Risk: If your application crashes halfway through a batch, Kafka will re-deliver the entire batch when the application restarts. Your business logic must be idempotent (safe to run twice).
+
+## 2. Use RECORD
+
+* When to use: When your processing logic is slow, or you want to minimize duplicate processing if a crash happens.
+* Why: If you poll 50 messages and the application crashes on message #25, Kafka knows you finished up to #24.
+* Risk: High network overhead because it writes a commit to the broker for every single message.
+
+## 3. Use MANUAL_IMMEDIATE
+
+* When to use: When you need absolute, programmatic control over the message lifecycle—such as database transaction pinning or custom orchestration workflows (like your retry mechanism).
+* Why: Spring hands you the Acknowledgment object. The offset is never committed unless your code explicitly calls ack.acknowledge().
+* Risk: If your developer forgets to call ack.acknowledge(), the consumer will get stuck processing the exact same message over and over again on every application restart.
+
+## 4. Use MANUAL
+
+* When to use: Similar to MANUAL_IMMEDIATE, but you want slightly better performance.
+* Why: Instead of stopping the thread to tell Kafka "I am done" after every message, calling ack.acknowledge() simply flags the message as done in your application memory. Spring aggregates these flags and sends them in one batch during the next poll cycle.
+
+## 5. Use TIME, COUNT, or COUNT_TIME
+
+* When to use: Micro-optimisations for extreme high-throughput pipelines.
+* Why: You can configure Spring to only commit offsets every 5 seconds (TIME) or every 10,000 processed messages (COUNT), drastically reducing the load on your Kafka brokers.
+
+------------------------------
+## Summary Rule of Thumb
+
+* If you want simplicity and performance, stick to BATCH and let Spring's error handler do the work.
+* If your method signature includes Acknowledgment ack, you must use MANUAL or MANUAL_IMMEDIATE, or your application will crash on startup.
+
+Here is the complete configuration and consumer code for the primary AckMode options.
+To keep the examples clean, they all use a standard Java POJO class named KafkaDemoEvent.
+------------------------------
+## 1. BATCH Mode (Default / Automated)
+When to use: Standard high-throughput processing. Offsets are committed after the entire batch of polled messages finishes processing.
+## Configuration
+
+@Beanpublic ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> batchKafkaListenerContainerFactory(
+ConsumerFactory<String, KafkaDemoEvent> consumerFactory) {
+ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> factory =
+new ConcurrentKafkaListenerContainerFactory<>();
+factory.setConsumerFactory(consumerFactory);
+
+    // Explicitly setting BATCH (though it is the default)
+    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+    return factory;
+}
+
+## Consumer Code
+
+@KafkaListener(topics = "batch-topic", containerFactory = "batchKafkaListenerContainerFactory")public void consumeBatch(KafkaDemoEvent event) {
+// No acknowledgment parameter needed.
+// If this method finishes without throwing an exception, Spring marks it as successful.
+System.out.println("Processed event: " + event.payload());
+}
+
+------------------------------
+## 2. RECORD Mode (Automated per Message)
+When to use: When processing takes a long time, and you want to commit progress immediately after each message to minimize duplicates if the app crashes.
+## Configuration
+
+@Beanpublic ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> recordKafkaListenerContainerFactory(
+ConsumerFactory<String, KafkaDemoEvent> consumerFactory) {
+ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> factory =
+new ConcurrentKafkaListenerContainerFactory<>();
+factory.setConsumerFactory(consumerFactory);
+
+    // Commit after every single record completes
+    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+    return factory;
+}
+
+## Consumer Code
+
+@KafkaListener(topics = "record-topic", containerFactory = "recordKafkaListenerContainerFactory")public void consumeRecord(KafkaDemoEvent event) {
+// Spring automatically sends a commit to Kafka the millisecond this method exits
+System.out.println("Processed single record: " + event.payload());
+}
+
+------------------------------
+## 3. MANUAL_IMMEDIATE Mode (Strict Manual Control)
+When to use: When you need absolute control. The offset is sent to Kafka synchronously right inside your executing thread.
+## Configuration
+
+@Beanpublic ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> manualImmediateKafkaListenerContainerFactory(
+ConsumerFactory<String, KafkaDemoEvent> consumerFactory) {
+ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> factory =
+new ConcurrentKafkaListenerContainerFactory<>();
+factory.setConsumerFactory(consumerFactory);
+
+    // Required to allow the Acknowledgment parameter in your method signature
+    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+    return factory;
+}
+
+## Consumer Code
+
+@KafkaListener(topics = "manual-immediate-topic", containerFactory = "manualImmediateKafkaListenerContainerFactory")public void consumeManualImmediate(KafkaDemoEvent event, Acknowledgment ack) {
+try {
+System.out.println("Processing event: " + event.payload());
+
+        // Explicitly commit now. Blocks the thread until Kafka confirms receipt.
+        ack.acknowledge(); 
+        
+    } catch (Exception e) {
+        System.err.println("Failed processing, offset NOT committed: " + e.getMessage());
+    }
+}
+
+------------------------------
+## 4. MANUAL Mode (Batched Manual Control)
+When to use: When you want programmatic control, but want better performance than MANUAL_IMMEDIATE.
+## Configuration
+
+@Beanpublic ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> manualKafkaListenerContainerFactory(
+ConsumerFactory<String, KafkaDemoEvent> consumerFactory) {
+ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> factory =
+new ConcurrentKafkaListenerContainerFactory<>();
+factory.setConsumerFactory(consumerFactory);
+
+    // Acknowledgment acts as a memory flag; actual commit happens on the next poll cycle
+    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+    return factory;
+}
+
+## Consumer Code
+
+@KafkaListener(topics = "manual-topic", containerFactory = "manualKafkaListenerContainerFactory")public void consumeManual(KafkaDemoEvent event, Acknowledgment ack) {
+System.out.println("Processing event: " + event.payload());
+
+    // Flags this message as ready to commit in memory. 
+    // Does not block the current thread with a network call to Kafka.
+    ack.acknowledge(); 
+}
+
+------------------------------
+## 5. COUNT / TIME Mode (Throttled Automated Commits)
+When to use: High-throughput processing pipelines where minimizing Kafka broker network load is your highest priority.
+## Configuration
+
+@Beanpublic ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> countTimeKafkaListenerContainerFactory(
+ConsumerFactory<String, KafkaDemoEvent> consumerFactory) {
+ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> factory =
+new ConcurrentKafkaListenerContainerFactory<>();
+factory.setConsumerFactory(consumerFactory);
+
+    // Commit whenever 1000 messages pass OR 5 seconds elapse (whichever happens first)
+    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.COUNT_TIME);
+    factory.getContainerProperties().setAckCount(1000);
+    factory.getContainerProperties().setAckTime(5000L); // 5000 ms
+    
+    return factory;
+}
+
+## Consumer Code
+
+@KafkaListener(topics = "count-time-topic", containerFactory = "countTimeKafkaListenerContainerFactory")public void consumeCountTime(KafkaDemoEvent event) {
+// Normal, simple consumer code.
+// Offsets are batched and flushed quietly based on the time/count limits configured above.
+System.out.println("Throttled processing: " + event.payload());
+}
+
+
+
+

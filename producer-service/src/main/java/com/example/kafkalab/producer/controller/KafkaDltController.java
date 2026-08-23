@@ -1,16 +1,10 @@
 package com.example.kafkalab.producer.controller;
 
 import com.example.kafkalab.common.dto.KafkaDemoEvent;
-import com.example.kafkalab.common.logging.KafkaLabLogger;
-import com.example.kafkalab.common.topic.KafkaTopics;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,11 +12,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-@RequestMapping("/api/kafka")
+@RequestMapping("/api/kafka/dlt")
 public class KafkaDltController {
 
-    private static final Logger log = LoggerFactory.getLogger(KafkaDltController.class);
-    private static final String PATTERN = "DLT";
+    private static final String MANUAL_TOPIC = "manual-dlt-demo";
+    private static final String ANNOTATION_TOPIC = "annotation-dlt-demo";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -30,36 +24,63 @@ public class KafkaDltController {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @PostMapping("/dlt")
-    public Map<String, Object> sendDltMessage(@RequestBody Map<String, Object> request) {
-        String message = (String) request.getOrDefault("message", "DLT test message - will fail permanently");
-        String customerId = (String) request.getOrDefault("customerId", "CUST-" + System.currentTimeMillis());
+    @PostMapping("/manual")
+    public ResponseEntity<Map<String, Object>> sendManualDltMessage(@RequestBody(required = false) Map<String, Object> request) {
 
-        KafkaDemoEvent event = KafkaDemoEvent.builder()
-            .eventType("DLT_DEMO")
-            .customerId(customerId)
-            .orderId("ORD-" + System.currentTimeMillis())
-            .amount(new BigDecimal("300.00"))
-            .payload(message)
-            .metadata(Map.of("source", "producer-service", "pattern", "dlt"))
-            .build();
+        String message = getValue(request, "message", "Manual DLT test message - will fail");
 
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(KafkaTopics.DLT, customerId, event);
+        String customerId = getValue(request, "customerId", "CUST-" + System.currentTimeMillis());
+
+        KafkaDemoEvent event = buildEvent(message, customerId);
+
+        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(MANUAL_TOPIC, customerId, event);
 
         future.whenComplete((result, ex) -> {
             if (ex != null) {
-                KafkaLabLogger.logError(log, PATTERN, "Failed to send DLT message", ex);
+                System.err.println("Failed to send manual DLT message. eventId=" + event.eventId());
             } else {
-                KafkaLabLogger.logProducerSend(log, PATTERN, KafkaTopics.DLT, event.eventId(), customerId,
-                    result.getRecordMetadata().partition());
+                System.out.println("Manual DLT message sent. topic=" + result.getRecordMetadata().topic() + ", partition=" + result.getRecordMetadata().partition() + ", offset=" + result.getRecordMetadata().offset() + ", eventId=" + event.eventId());
             }
         });
 
-        return Map.of(
-            "eventId", event.eventId(),
-            "topic", KafkaTopics.DLT,
-            "customerId", customerId,
-            "status", "sent"
-        );
+        return ResponseEntity.ok(Map.of("pattern", "MANUAL_DLT", "topic", MANUAL_TOPIC, "eventId", event.eventId(), "customerId", customerId, "status", "sent"));
+    }
+
+    @PostMapping("/annotation")
+    public ResponseEntity<Map<String, Object>> sendAnnotationDltMessage(@RequestBody(required = false) Map<String, Object> request) {
+
+        String message = getValue(request, "message", "Annotation DLT test message - will fail");
+
+        String customerId = getValue(request, "customerId", "CUST-" + System.currentTimeMillis());
+
+        KafkaDemoEvent event = buildEvent(message, customerId);
+
+        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(ANNOTATION_TOPIC, customerId, event);
+
+        future.whenComplete((result, ex) -> {
+            if (ex != null) {
+                System.err.println("Failed to send annotation DLT message. eventId=" + event.eventId());
+            } else {
+                System.out.println("Annotation DLT message sent. topic=" + result.getRecordMetadata().topic() + ", partition=" + result.getRecordMetadata().partition() + ", offset=" + result.getRecordMetadata().offset() + ", eventId=" + event.eventId());
+            }
+        });
+
+        return ResponseEntity.ok(Map.of("pattern", "ANNOTATION_RETRYABLE_TOPIC", "topic", ANNOTATION_TOPIC, "eventId", event.eventId(), "customerId", customerId, "status", "sent"));
+    }
+
+    private KafkaDemoEvent buildEvent(String message, String customerId) {
+
+        return KafkaDemoEvent.builder().eventType("DLT_DEMO").customerId(customerId).orderId("ORD-" + System.currentTimeMillis()).amount(new BigDecimal("300.00")).payload(message).metadata(Map.of("source", "producer-service", "pattern", "dlt", "createdAt", Instant.now().toString())).build();
+    }
+
+    private String getValue(Map<String, Object> request, String key, String defaultValue) {
+
+        if (request == null) {
+            return defaultValue;
+        }
+
+        Object value = request.get(key);
+
+        return value == null ? defaultValue : value.toString();
     }
 }

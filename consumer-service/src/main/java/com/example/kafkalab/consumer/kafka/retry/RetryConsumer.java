@@ -5,7 +5,9 @@ import com.example.kafkalab.common.logging.KafkaLabLogger;
 import com.example.kafkalab.common.topic.KafkaTopics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.kafka.annotation.BackOff;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
@@ -23,12 +25,17 @@ public class RetryConsumer {
     // Track attempt counts per eventId
     private final Map<String, AtomicInteger> attemptCounts = new ConcurrentHashMap<>();
 
-    @KafkaListener(
-        topics = KafkaTopics.RETRY,
-        groupId = GROUP,
-        containerFactory = "retryKafkaListenerContainerFactory"
-    )
-    public void consume(KafkaDemoEvent event, Acknowledgment ack) {
+//    @KafkaListener(
+//        topics = KafkaTopics.RETRY,
+//        groupId = GROUP,
+//        containerFactory = "retryKafkaListenerContainerFactory"
+//    )
+    @RetryableTopic(attempts = "3",
+    backOff = @BackOff(delay = 1000L),
+    include = {RuntimeException.class})
+    @KafkaListener(topics = KafkaTopics.RETRY, groupId = GROUP, containerFactory = "kafkaListenerContainerFactory")
+//    public void consume(KafkaDemoEvent event, Acknowledgment ack) {
+    public void consume(KafkaDemoEvent event) {
         String eventId = event.eventId();
         int attempt = attemptCounts.computeIfAbsent(eventId, k -> new AtomicInteger(0)).incrementAndGet();
 
@@ -54,7 +61,7 @@ public class RetryConsumer {
 
         // Success - acknowledge
         attemptCounts.remove(eventId);
-        ack.acknowledge();
+//        ack.acknowledge();
         KafkaLabLogger.logPatternEvent(log, PATTERN, "consumer-service", GROUP,
             KafkaTopics.RETRY, eventId, 0, 0,
             String.format("Attempt %d succeeded for event: %s", attempt, event.payload()));

@@ -6,7 +6,7 @@
 
     <parent>
         <groupId>com.example.kafkalab</groupId>
-        <artifactId>kafka-communication-lab</artifactId>
+        <artifactId>kafka-patterns</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 

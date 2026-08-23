@@ -4,16 +4,21 @@ import com.example.kafkalab.common.dto.KafkaDemoEvent;
 import com.example.kafkalab.common.dto.RequestReplyDTOs;
 import com.example.kafkalab.common.dto.EventSourcingDTOs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
+import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
@@ -80,17 +85,32 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
+    @Bean
+    public ProducerFactory<String, Object> dltProducerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,bootstrapServers);
+        props.put( ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        props.put(ProducerConfig.ACKS_CONFIG,"all");
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> dltKafkaTemplate(@Qualifier("dltProducerFactory")ProducerFactory<String, Object> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+
     // Factory with DLT for dead letter demonstrations
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> dltKafkaListenerContainerFactory(
             ConsumerFactory<String, KafkaDemoEvent> consumerFactory,
-            org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate) {
+            org.springframework.kafka.core.KafkaTemplate<String, Object> dltKafkaTemplate) {
         ConcurrentKafkaListenerContainerFactory<String, KafkaDemoEvent> factory =
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(1);
         // Retry 3 times then send to DLT
-        var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
+        var recoverer = new DeadLetterPublishingRecoverer(dltKafkaTemplate,
             (record, ex) -> new org.apache.kafka.common.TopicPartition(record.topic() + "-dlt", record.partition()));
         factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 3L)));
         return factory;
@@ -105,6 +125,7 @@ public class KafkaConsumerConfig {
         factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(1);
         // Retry 3 times with 1 second fixed backoff
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3L)));
         return factory;
     }
@@ -117,6 +138,7 @@ public class KafkaConsumerConfig {
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(1);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         // Retry 3 times with increasing backoff: 2s, 5s, 10s
         factory.setCommonErrorHandler(new DefaultErrorHandler(
             (record, ex) -> {}, // Exception handler

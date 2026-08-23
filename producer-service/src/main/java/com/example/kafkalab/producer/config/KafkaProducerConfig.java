@@ -1,9 +1,5 @@
 package com.example.kafkalab.producer.config;
 
-import com.example.kafkalab.common.dto.KafkaDemoEvent;
-import com.example.kafkalab.common.dto.RequestReplyDTOs;
-import com.example.kafkalab.common.dto.StreamsDTOs;
-import com.example.kafkalab.common.dto.EventSourcingDTOs;
 import com.example.kafkalab.common.topic.KafkaTopics;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -12,6 +8,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -43,6 +40,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
+    @Primary
     public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }

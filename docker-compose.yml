@@ -2,43 +2,34 @@
 
 services:
   kafka:
-    image: apache/kafka:4.2.1
+    image: docker.io/apache/kafka:4.2.1
     container_name: kafka-lab-broker
     hostname: kafka
     ports:
       - "9092:9092"
     environment:
-      # KRaft mode configuration
+      # ====== CRITICAL ADDITION FOR KRAFT ======
+      CLUSTER_ID: "4L62C9HgTxy6kmA0qg11Ag" # Replace with your generated UUID
+
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:9094
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_PROCESS_ROLES: broker,controller
-
-      # Topic auto-creation (we use explicit NewTopic beans, but enable for convenience)
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-
-      # Log configuration
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
       KAFKA_MIN_INSYNC_REPLICAS: 1
-
-      # Retention
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 1073741824
-
-      # Performance
       KAFKA_SOCKET_SEND_BUFFER_BYTES: 102400
       KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 102400
-
-      # JVM options
       KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
-
     volumes:
-      - kafka-data:/var/lib/kafka/data
+      - kafka-data:/var/lib/kafka/data:Z
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
       interval: 10s
@@ -48,13 +39,13 @@ services:
       - kafka-lab-network
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: docker.io/provectuslabs/kafka-ui:latest
     container_name: kafka-lab-ui
     ports:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: kafka-lab
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: localhost:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: ""
       DYNAMIC_CONFIG_ENABLED: "true"
     depends_on:
