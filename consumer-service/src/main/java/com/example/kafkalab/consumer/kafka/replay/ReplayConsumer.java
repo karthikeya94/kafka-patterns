@@ -30,7 +30,7 @@ public class ReplayConsumer extends AbstractConsumerSeekAware {
     @KafkaListener(
             topics = KafkaTopics.EVENT_REPLAY,
             groupId = GROUP,
-            containerFactory = "kafkaListenerContainerFactory"
+            containerFactory = "retryKafkaListenerContainerFactory"
     )
     public void consume(KafkaDemoEvent event, Acknowledgment ack) {
         KafkaLabLogger.logPatternEvent(log, PATTERN, "consumer-service", GROUP,

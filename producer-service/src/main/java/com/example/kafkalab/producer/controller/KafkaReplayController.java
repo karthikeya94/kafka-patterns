@@ -66,3 +66,68 @@ public class KafkaReplayController {
         );
     }
 }
+
+/*
+
+@RestController
+@RequestMapping("/api/kafka")
+public class ReplayProducerController {
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    public ReplayProducerController(
+            KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    @PostMapping("/events")
+    public Map<String, Object> produce(
+            @RequestParam(defaultValue = "10") int count,
+            @RequestParam(defaultValue = "CUSTOMER-1") String customerId) {
+
+        List<CompletableFuture<SendResult<String, Object>>> futures =
+                new ArrayList<>();
+
+        for (int i = 0; i < count; i++) {
+
+            KafkaDemoEvent event = KafkaDemoEvent.builder()
+                    .eventType("REPLAY_DEMO")
+                    .customerId(customerId)
+                    .orderId("ORDER-" + UUID.randomUUID())
+                    .amount(BigDecimal.valueOf(100 + i))
+                    .payload("Replay message #" + i)
+                    .metadata(Map.of(
+                            "source", "producer",
+                            "pattern", "replay",
+                            "sequence", String.valueOf(i),
+                            "createdAt", Instant.now().toString()
+                    ))
+                    .build();
+
+            */
+/*
+             * customerId is the Kafka key.
+             *
+             * Kafka's partitioner will consistently route
+             * the same customerId to the same partition
+             * (assuming the partition count remains unchanged).
+             *//*
+
+            CompletableFuture<SendResult<String, Object>> future =
+                    kafkaTemplate.send(
+                            KafkaTopics.EVENT_REPLAY,
+                            customerId,
+                            event
+                    );
+
+            futures.add(future);
+        }
+
+        return Map.of(
+                "topic", KafkaTopics.EVENT_REPLAY,
+                "customerId", customerId,
+                "count", count,
+                "status", "messages-submitted"
+        );
+    }
+}*/

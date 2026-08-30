@@ -27,7 +27,7 @@ public class EventSourcingConsumer {
     @KafkaListener(
         topics = KafkaTopics.EVENT_SOURCING,
         groupId = GROUP,
-        containerFactory = "kafkaListenerContainerFactory"
+        containerFactory = "eventSourcingListenerContainerFactory"
     )
     public void consume(EventSourcingDTOs.OrderEvent event, Acknowledgment ack) {
         String orderId = event.orderId();

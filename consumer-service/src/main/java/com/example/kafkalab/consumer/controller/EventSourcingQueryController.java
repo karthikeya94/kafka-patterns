@@ -26,7 +26,7 @@ public class EventSourcingQueryController {
     }
 
     @GetMapping("/orders/{orderId}")
-    public Map<String, Object> getOrderState(@PathVariable String orderId) {
+    public Map<String, Object> getOrderState(@PathVariable(name = "orderId") String orderId) {
         EventSourcingDTOs.OrderState state = eventSourcingConsumer.getOrderState(orderId);
 
         if (state == null) {

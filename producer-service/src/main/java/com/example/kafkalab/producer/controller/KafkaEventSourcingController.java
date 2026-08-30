@@ -32,8 +32,8 @@ public class KafkaEventSourcingController {
 
     @PostMapping("/event-sourcing")
     public Map<String, Object> sendEventSourcingEvents(@RequestBody Map<String, Object> request) {
-        String orderId = (String) request.getOrDefault("orderId", "ORD-" + System.currentTimeMillis());
-        String customerId = (String) request.getOrDefault("customerId", "CUST-" + System.currentTimeMillis());
+        String orderId = (String) request.getOrDefault("orderId", "ORD_" + System.currentTimeMillis());
+        String customerId = (String) request.getOrDefault("customerId", "CUST_" + System.currentTimeMillis());
         BigDecimal amount = new BigDecimal(request.getOrDefault("amount", "999.99").toString());
         String product = (String) request.getOrDefault("product", "Premium Widget");
 
@@ -45,7 +45,7 @@ public class KafkaEventSourcingController {
 
         // Send PaymentReceived
         EventSourcingDTOs.PaymentReceived payment = new EventSourcingDTOs.PaymentReceived(
-            orderId, "PAY-" + System.currentTimeMillis(), amount, Instant.now()
+            orderId, "PAY_" + System.currentTimeMillis(), amount, Instant.now()
         );
         kafkaTemplate.send(KafkaTopics.EVENT_SOURCING, orderId, payment);
 
