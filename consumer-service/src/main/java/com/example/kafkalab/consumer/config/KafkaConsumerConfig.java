@@ -149,11 +149,12 @@ public class KafkaConsumerConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, RequestReplyDTOs.Request> requestReplyListenerContainerFactory(
-            ConsumerFactory<String, RequestReplyDTOs.Request> consumerFactory) {
+            ConsumerFactory<String, RequestReplyDTOs.Request> consumerFactory, KafkaTemplate<String, Object> dltKafkaTemplate) {
         ConcurrentKafkaListenerContainerFactory<String, RequestReplyDTOs.Request> factory =
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(1);
+        factory.setReplyTemplate(dltKafkaTemplate);
         return factory;
     }
 

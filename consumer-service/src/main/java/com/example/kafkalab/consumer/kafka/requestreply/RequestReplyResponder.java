@@ -1,6 +1,5 @@
 package com.example.kafkalab.consumer.kafka.requestreply;
 
-import com.example.kafkalab.common.dto.KafkaDemoEvent;
 import com.example.kafkalab.common.dto.RequestReplyDTOs;
 import com.example.kafkalab.common.logging.KafkaLabLogger;
 import com.example.kafkalab.common.topic.KafkaTopics;
@@ -8,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,9 +26,10 @@ public class RequestReplyResponder {
     @KafkaListener(
         topics = KafkaTopics.REQUEST_REPLY_REQUEST,
         groupId = GROUP,
-        containerFactory = "kafkaListenerContainerFactory"
+        containerFactory = "requestReplyListenerContainerFactory"
     )
-    public void handleRequest(RequestReplyDTOs.Request request) {
+    @SendTo(KafkaTopics.REQUEST_REPLY_RESPONSE)
+    public RequestReplyDTOs.Response handleRequest(RequestReplyDTOs.Request request) {
         KafkaLabLogger.logPatternEvent(log, PATTERN, "consumer-service", GROUP,
             KafkaTopics.REQUEST_REPLY_REQUEST, request.requestId(), 0, 0,
             String.format("Received request: operation=%s payload=%s", request.operation(), request.payload()));
@@ -36,7 +37,7 @@ public class RequestReplyResponder {
         // Process the request
         String result;
         boolean success = true;
-        String errorMessage = null;
+        String errorMessage = "";
 
         try {
             switch (request.operation().toLowerCase()) {
@@ -62,10 +63,11 @@ public class RequestReplyResponder {
             success, result, errorMessage, java.time.Instant.now()
         );
 
-        kafkaTemplate.send(KafkaTopics.REQUEST_REPLY_RESPONSE, request.correlationId(), response);
+//        kafkaTemplate.send(KafkaTopics.REQUEST_REPLY_RESPONSE, request.correlationId(), response);
 
         KafkaLabLogger.logPatternEvent(log, PATTERN, "consumer-service", GROUP,
             KafkaTopics.REQUEST_REPLY_RESPONSE, request.requestId(), 0, 0,
             String.format("Sent response: success=%s result=%s", success, result));
+        return response;
     }
 }
